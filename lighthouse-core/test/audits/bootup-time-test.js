@@ -9,6 +9,7 @@
 const BootupTime = require('../../audits/bootup-time.js');
 const DevtoolsTimelineGather = require('../../gather/computed/devtools-timeline-model');
 const assert = require('assert');
+const {groups} = require('../../lib/task-groups');
 
 const devtoolsTimelineGather = new DevtoolsTimelineGather({});
 
@@ -39,14 +40,14 @@ describe('Performance: bootup-time audit', () => {
         return roundedValue;
       };
 
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/analytics.js'), {'Script Evaluation': 40.1, 'Script Parsing & Compile': 9.6, 'Style & Layout': 0.2});
-      assert.deepEqual(roundedValueOf('https://pwa.rocks/script.js'), {'Script Evaluation': 31.8, 'Style & Layout': 5.5, 'Script Parsing & Compile': 1.3});
-      assert.deepEqual(roundedValueOf('https://www.googletagmanager.com/gtm.js?id=GTM-Q5SW'), {'Script Evaluation': 25, 'Script Parsing & Compile': 5.5, 'Style & Layout': 1.2});
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/plugins/ua/linkid.js'), {'Script Evaluation': 25.2, 'Script Parsing & Compile': 1.2});
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=jdCfRmudTmy-0USnJ8xPbw'), {'Script Parsing & Compile': 3, 'Script Evaluation': 1.2});
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=qvpc5qIfRC2EMnbn6bbN5A'), {'Script Parsing & Compile': 2.5, 'Script Evaluation': 1});
-      assert.deepEqual(roundedValueOf('https://pwa.rocks/'), {'Parsing DOM': 14.2, 'Script Evaluation': 6.1, 'Script Parsing & Compile': 1.2});
-      assert.deepEqual(roundedValueOf('https://pwa.rocks/0ff789bf.js'), {'Parsing DOM': 0});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/analytics.js'), {[groups.scripting]: 40.1, [groups.scriptParseCompile]: 9.6, [groups.styleLayout]: 0.2});
+      assert.deepEqual(roundedValueOf('https://pwa.rocks/script.js'), {[groups.scripting]: 31.8, [groups.styleLayout]: 5.5, [groups.scriptParseCompile]: 1.3});
+      assert.deepEqual(roundedValueOf('https://www.googletagmanager.com/gtm.js?id=GTM-Q5SW'), {[groups.scripting]: 25, [groups.scriptParseCompile]: 5.5, [groups.styleLayout]: 1.2});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/plugins/ua/linkid.js'), {[groups.scripting]: 25.2, [groups.scriptParseCompile]: 1.2});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=jdCfRmudTmy-0USnJ8xPbw'), {[groups.scriptParseCompile]: 3, [groups.scripting]: 1.2});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=qvpc5qIfRC2EMnbn6bbN5A'), {[groups.scriptParseCompile]: 2.5, [groups.scripting]: 1});
+      assert.deepEqual(roundedValueOf('https://pwa.rocks/'), {[groups.parseHTML]: 14.2, [groups.scripting]: 6.1, [groups.scriptParseCompile]: 1.2});
+      assert.deepEqual(roundedValueOf('https://pwa.rocks/0ff789bf.js'), {[groups.parseHTML]: 0});
     });
   });
 

@@ -12,7 +12,6 @@
 
 const Audit = require('./audit');
 const Util = require('../report/v2/renderer/util');
-const DevtoolsTimelineModel = require('../lib/traces/devtools-timeline-model');
 
 // We group all trace events into groups to show a highlevel breakdown of the page
 const group = {
@@ -115,11 +114,10 @@ class PageExecutionTimings extends Audit {
   }
 
   /**
-   * @param {!Array<TraceEvent>} trace
+   * @param {!DevtoolsTimelineModel} timelineModel
    * @return {!Map<string, number>}
    */
-  static getExecutionTimingsByCategory(trace) {
-    const timelineModel = new DevtoolsTimelineModel(trace);
+  static getExecutionTimingsByCategory(timelineModel) {
     const bottomUpByName = timelineModel.bottomUpGroupBy('EventName');
 
     const result = new Map();
@@ -135,43 +133,49 @@ class PageExecutionTimings extends Audit {
    */
   static audit(artifacts) {
     const trace = artifacts.traces[PageExecutionTimings.DEFAULT_PASS];
-    const executionTimings = PageExecutionTimings.getExecutionTimingsByCategory(trace);
-    let totalExecutionTime = 0;
 
-    const extendedInfo = {};
-    const categoryTotals = {};
-    const results = Array.from(executionTimings).map(([eventName, duration]) => {
-      totalExecutionTime += duration;
-      extendedInfo[eventName] = duration;
-      const groupName = taskToGroup[eventName];
+    return artifacts.requestDevtoolsTimelineModel(trace)
+      .then(devtoolsTimelineModel => {
+        const executionTimings = PageExecutionTimings.getExecutionTimingsByCategory(
+          devtoolsTimelineModel
+        );
+        let totalExecutionTime = 0;
 
-      const categoryTotal = categoryTotals[groupName] || 0;
-      categoryTotals[groupName] = categoryTotal + duration;
+        const extendedInfo = {};
+        const categoryTotals = {};
+        const results = Array.from(executionTimings).map(([eventName, duration]) => {
+          totalExecutionTime += duration;
+          extendedInfo[eventName] = duration;
+          const groupName = taskToGroup[eventName];
 
-      return {
-        category: eventName,
-        group: groupName,
-        duration: Util.formatMilliseconds(duration, 1),
-      };
-    });
+          const categoryTotal = categoryTotals[groupName] || 0;
+          categoryTotals[groupName] = categoryTotal + duration;
 
-    const headings = [
-      {key: 'group', itemType: 'text', text: 'Category'},
-      {key: 'category', itemType: 'text', text: 'Work'},
-      {key: 'duration', itemType: 'text', text: 'Time spent'},
-    ];
-    results.stableSort((a, b) => categoryTotals[b.group] - categoryTotals[a.group]);
-    const tableDetails = PageExecutionTimings.makeTableDetails(headings, results);
+          return {
+            category: eventName,
+            group: groupName,
+            duration: Util.formatMilliseconds(duration, 1),
+          };
+        });
 
-    return {
-      score: false,
-      rawValue: totalExecutionTime,
-      displayValue: Util.formatMilliseconds(totalExecutionTime),
-      details: tableDetails,
-      extendedInfo: {
-        value: extendedInfo,
-      },
-    };
+        const headings = [
+          {key: 'group', itemType: 'text', text: 'Category'},
+          {key: 'category', itemType: 'text', text: 'Work'},
+          {key: 'duration', itemType: 'text', text: 'Time spent'},
+        ];
+        results.stableSort((a, b) => categoryTotals[b.group] - categoryTotals[a.group]);
+        const tableDetails = PageExecutionTimings.makeTableDetails(headings, results);
+
+        return {
+          score: false,
+          rawValue: totalExecutionTime,
+          displayValue: Util.formatMilliseconds(totalExecutionTime),
+          details: tableDetails,
+          extendedInfo: {
+            value: extendedInfo,
+          },
+        };
+      });
   }
 }
 

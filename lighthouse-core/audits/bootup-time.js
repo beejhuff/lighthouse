@@ -6,7 +6,6 @@
 'use strict';
 
 const Audit = require('./audit');
-const DevtoolsTimelineModel = require('../lib/traces/devtools-timeline-model');
 const WebInspector = require('../lib/web-inspector');
 const Util = require('../report/v2/renderer/util.js');
 
@@ -109,11 +108,10 @@ class BootupTime extends Audit {
   }
 
   /**
-   * @param {!Array<TraceEvent>=} trace
+   * @param {DevtoolsTimelineModel} timelineModel
    * @return {!Map<string, Number>}
    */
-  static getExecutionTimingsByURL(trace) {
-    const timelineModel = new DevtoolsTimelineModel(trace);
+  static getExecutionTimingsByURL(timelineModel) {
     const bottomUpByURL = timelineModel.bottomUpGroupBy('URL');
     const result = new Map();
 
@@ -144,46 +142,47 @@ class BootupTime extends Audit {
    */
   static audit(artifacts) {
     const trace = artifacts.traces[BootupTime.DEFAULT_PASS];
-    const executionTimings = BootupTime.getExecutionTimingsByURL(trace);
+    return artifacts.requestDevtoolsTimelineModel(trace).then(devtoolsTimelineModel => {
+      const executionTimings = BootupTime.getExecutionTimingsByURL(devtoolsTimelineModel);
+      let totalBootupTime = 0;
+      const extendedInfo = {};
 
-    let totalBootupTime = 0;
-    const extendedInfo = {};
+      const headings = [
+        {key: 'url', itemType: 'url', text: 'URL'},
+        {key: 'scripting', itemType: 'text', text: group.scripting},
+        {key: 'scriptParseCompile', itemType: 'text', text: group.scriptParseCompile},
+      ];
 
-    const headings = [
-      {key: 'url', itemType: 'url', text: 'URL'},
-      {key: 'scripting', itemType: 'text', text: group.scripting},
-      {key: 'scriptParseCompile', itemType: 'text', text: group.scriptParseCompile},
-    ];
+      // map data in correct format to create a table
+      const results = Array.from(executionTimings).map(([url, groups]) => {
+        // Add up the totalBootupTime for all the taskGroups
+        totalBootupTime += Object.keys(groups).reduce((sum, name) => sum += groups[name], 0);
+        extendedInfo[url] = groups;
 
-    // map data in correct format to create a table
-    const results = Array.from(executionTimings).map(([url, groups]) => {
-      // Add up the totalBootupTime for all the taskGroups
-      totalBootupTime += Object.keys(groups).reduce((sum, name) => sum += groups[name], 0);
-      extendedInfo[url] = groups;
+        const scriptingTotal = groups[group.scripting] || 0;
+        const parseCompileTotal = groups[group.scriptParseCompile] || 0;
+        return {
+          url: url,
+          sum: scriptingTotal + parseCompileTotal,
+          // Only reveal the javascript task costs
+          // Later we can account for forced layout costs, etc.
+          scripting: Util.formatMilliseconds(scriptingTotal, 1),
+          scriptParseCompile: Util.formatMilliseconds(parseCompileTotal, 1),
+        };
+      }).sort((a, b) => b.sum - a.sum);
 
-      const scriptingTotal = groups[group.scripting] || 0;
-      const parseCompileTotal = groups[group.scriptParseCompile] || 0;
+      const tableDetails = BootupTime.makeTableDetails(headings, results);
+
       return {
-        url: url,
-        sum: scriptingTotal + parseCompileTotal,
-        // Only reveal the javascript task costs
-        // Later we can account for forced layout costs, etc.
-        scripting: Util.formatMilliseconds(scriptingTotal, 1),
-        scriptParseCompile: Util.formatMilliseconds(parseCompileTotal, 1),
+        score: totalBootupTime < 4000,
+        rawValue: totalBootupTime,
+        displayValue: Util.formatMilliseconds(totalBootupTime),
+        details: tableDetails,
+        extendedInfo: {
+          value: extendedInfo,
+        },
       };
-    }).sort((a, b) => b.sum - a.sum);
-
-    const tableDetails = BootupTime.makeTableDetails(headings, results);
-
-    return {
-      score: totalBootupTime < 4000,
-      rawValue: totalBootupTime,
-      displayValue: Util.formatMilliseconds(totalBootupTime),
-      details: tableDetails,
-      extendedInfo: {
-        value: extendedInfo,
-      },
-    };
+    });
   }
 }
 

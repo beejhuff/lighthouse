@@ -6,16 +6,21 @@
 'use strict';
 
 /* eslint-env mocha */
-
 const ScreenshotsGather = require('../../../gather/computed/screenshots');
+const DevtoolsTimelineGather = require('../../../gather/computed/devtools-timeline-model');
 const assert = require('assert');
 const pwaTrace = require('../../fixtures/traces/progressive-app.json');
 
-const screenshotsGather = new ScreenshotsGather();
+const screenshotsGather = new ScreenshotsGather({});
+const devtoolsTimelineGather = new DevtoolsTimelineGather({});
 
 describe('Screenshot gatherer', () => {
   it('returns an artifact for a real trace', () => {
-    return screenshotsGather.request({traceEvents: pwaTrace}).then(screenshots => {
+    const artifacts = {
+      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    };
+
+    return screenshotsGather.compute_({traceEvents: pwaTrace}, artifacts).then(screenshots => {
       assert.ok(Array.isArray(screenshots));
       assert.equal(screenshots.length, 7);
 

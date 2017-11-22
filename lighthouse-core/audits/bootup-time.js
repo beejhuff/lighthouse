@@ -8,7 +8,7 @@
 const Audit = require('./audit');
 const WebInspector = require('../lib/web-inspector');
 const Util = require('../report/v2/renderer/util');
-const {groups, taskToGroup} = require('../lib/task-groups');
+const {groupIdToName, taskToGroup} = require('../lib/task-groups');
 
 class BootupTime extends Audit {
   /**
@@ -45,7 +45,7 @@ class BootupTime extends Audit {
         // eventStyle() returns a string like 'Evaluate Script'
         const task = WebInspector.TimelineUIUtils.eventStyle(perTaskPerUrlNode.event);
         // Resolve which taskGroup we're using
-        const groupName = taskToGroup[task.title] || groups.other;
+        const groupName = taskToGroup[task.title] || groupIdToName.other;
         const groupTotal = taskGroups[groupName] || 0;
         taskGroups[groupName] = groupTotal + (perTaskPerUrlNode.selfTime || 0);
       });
@@ -68,8 +68,8 @@ class BootupTime extends Audit {
 
       const headings = [
         {key: 'url', itemType: 'url', text: 'URL'},
-        {key: 'scripting', itemType: 'text', text: groups.scripting},
-        {key: 'scriptParseCompile', itemType: 'text', text: groups.scriptParseCompile},
+        {key: 'scripting', itemType: 'text', text: groupIdToName.scripting},
+        {key: 'scriptParseCompile', itemType: 'text', text: groupIdToName.scriptParseCompile},
       ];
 
       // map data in correct format to create a table
@@ -78,8 +78,8 @@ class BootupTime extends Audit {
         totalBootupTime += Object.keys(groups).reduce((sum, name) => sum += groups[name], 0);
         extendedInfo[url] = groups;
 
-        const scriptingTotal = groups[groups.scripting] || 0;
-        const parseCompileTotal = groups[groups.scriptParseCompile] || 0;
+        const scriptingTotal = groups[groupIdToName.scripting] || 0;
+        const parseCompileTotal = groups[groupIdToName.scriptParseCompile] || 0;
         return {
           url: url,
           sum: scriptingTotal + parseCompileTotal,

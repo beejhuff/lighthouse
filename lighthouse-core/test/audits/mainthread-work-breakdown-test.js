@@ -7,14 +7,9 @@
 
 /* eslint-env mocha */
 const PageExecutionTimings = require('../../audits/mainthread-work-breakdown.js');
-const DevtoolsTimelineGather = require('../../gather/computed/devtools-timeline-model');
+const Runner = require('../../runner.js');
 const assert = require('assert');
 
-const devtoolsTimelineGather = new DevtoolsTimelineGather({});
-
-// sadly require(file) is not working correctly.
-// traceParser parser returns preact trace data the same as JSON.parse
-// fails when require is used
 const acceptableTrace = require('../fixtures/traces/progressive-app-m60.json');
 const siteWithRedirectTrace = require('../fixtures/traces/site-with-redirect.json');
 const loadTrace = require('../fixtures/traces/load.json');
@@ -66,12 +61,11 @@ const loadTraceExpectations = {
 
 describe('Performance: page execution timings audit', () => {
   it('should compute the correct pageExecutionTiming values for the pwa trace', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    const artifacts = Object.assign({
       traces: {
         [PageExecutionTimings.DEFAULT_PASS]: acceptableTrace,
       },
-    };
+    }, Runner.instantiateComputedArtifacts());
 
     return PageExecutionTimings.audit(artifacts).then(output => {
       const valueOf = name => Math.round(output.extendedInfo.value[name]);
@@ -89,12 +83,11 @@ describe('Performance: page execution timings audit', () => {
   });
 
   it('should compute the correct pageExecutionTiming values for the redirect trace', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    const artifacts = Object.assign({
       traces: {
         [PageExecutionTimings.DEFAULT_PASS]: siteWithRedirectTrace,
       },
-    };
+    }, Runner.instantiateComputedArtifacts());
 
     return PageExecutionTimings.audit(artifacts).then(output => {
       const valueOf = name => Math.round(output.extendedInfo.value[name]);
@@ -111,12 +104,11 @@ describe('Performance: page execution timings audit', () => {
   });
 
   it('should compute the correct pageExecutionTiming values for the load trace', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    const artifacts = Object.assign({
       traces: {
         [PageExecutionTimings.DEFAULT_PASS]: loadTrace,
       },
-    };
+    }, Runner.instantiateComputedArtifacts());
 
     return PageExecutionTimings.audit(artifacts).then(output => {
       const valueOf = name => Math.round(output.extendedInfo.value[name]);
@@ -133,12 +125,11 @@ describe('Performance: page execution timings audit', () => {
   });
 
   it('should get no data when no events are present', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    const artifacts = Object.assign({
       traces: {
         [PageExecutionTimings.DEFAULT_PASS]: errorTrace,
       },
-    };
+    }, Runner.instantiateComputedArtifacts());
 
     return PageExecutionTimings.audit(artifacts).then(output => {
       assert.equal(output.details.items.length, 0);

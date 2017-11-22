@@ -7,26 +7,20 @@
 
 /* eslint-env mocha */
 const BootupTime = require('../../audits/bootup-time.js');
-const DevtoolsTimelineGather = require('../../gather/computed/devtools-timeline-model');
+const Runner = require('../../runner.js');
 const assert = require('assert');
-const {groups} = require('../../lib/task-groups');
+const {groupIdToName} = require('../../lib/task-groups');
 
-const devtoolsTimelineGather = new DevtoolsTimelineGather({});
-
-// sadly require(file) is not working correctly.
-// traceParser parser returns preact trace data the same as JSON.parse
-// fails when require is used
 const acceptableTrace = require('../fixtures/traces/progressive-app-m60.json');
 const errorTrace = require('../fixtures/traces/airhorner_no_fcp.json');
 
 describe('Performance: bootup-time audit', () => {
   it('should compute the correct BootupTime values', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    const artifacts = Object.assign({
       traces: {
         [BootupTime.DEFAULT_PASS]: acceptableTrace,
       },
-    };
+    }, Runner.instantiateComputedArtifacts());
 
     return BootupTime.audit(artifacts).then(output => {
       assert.equal(output.details.items.length, 8);
@@ -40,24 +34,23 @@ describe('Performance: bootup-time audit', () => {
         return roundedValue;
       };
 
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/analytics.js'), {[groups.scripting]: 40.1, [groups.scriptParseCompile]: 9.6, [groups.styleLayout]: 0.2});
-      assert.deepEqual(roundedValueOf('https://pwa.rocks/script.js'), {[groups.scripting]: 31.8, [groups.styleLayout]: 5.5, [groups.scriptParseCompile]: 1.3});
-      assert.deepEqual(roundedValueOf('https://www.googletagmanager.com/gtm.js?id=GTM-Q5SW'), {[groups.scripting]: 25, [groups.scriptParseCompile]: 5.5, [groups.styleLayout]: 1.2});
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/plugins/ua/linkid.js'), {[groups.scripting]: 25.2, [groups.scriptParseCompile]: 1.2});
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=jdCfRmudTmy-0USnJ8xPbw'), {[groups.scriptParseCompile]: 3, [groups.scripting]: 1.2});
-      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=qvpc5qIfRC2EMnbn6bbN5A'), {[groups.scriptParseCompile]: 2.5, [groups.scripting]: 1});
-      assert.deepEqual(roundedValueOf('https://pwa.rocks/'), {[groups.parseHTML]: 14.2, [groups.scripting]: 6.1, [groups.scriptParseCompile]: 1.2});
-      assert.deepEqual(roundedValueOf('https://pwa.rocks/0ff789bf.js'), {[groups.parseHTML]: 0});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/analytics.js'), {[groupIdToName.scripting]: 40.1, [groupIdToName.scriptParseCompile]: 9.6, [groupIdToName.styleLayout]: 0.2});
+      assert.deepEqual(roundedValueOf('https://pwa.rocks/script.js'), {[groupIdToName.scripting]: 31.8, [groupIdToName.styleLayout]: 5.5, [groupIdToName.scriptParseCompile]: 1.3});
+      assert.deepEqual(roundedValueOf('https://www.googletagmanager.com/gtm.js?id=GTM-Q5SW'), {[groupIdToName.scripting]: 25, [groupIdToName.scriptParseCompile]: 5.5, [groupIdToName.styleLayout]: 1.2});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/plugins/ua/linkid.js'), {[groupIdToName.scripting]: 25.2, [groupIdToName.scriptParseCompile]: 1.2});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=jdCfRmudTmy-0USnJ8xPbw'), {[groupIdToName.scriptParseCompile]: 3, [groupIdToName.scripting]: 1.2});
+      assert.deepEqual(roundedValueOf('https://www.google-analytics.com/cx/api.js?experiment=qvpc5qIfRC2EMnbn6bbN5A'), {[groupIdToName.scriptParseCompile]: 2.5, [groupIdToName.scripting]: 1});
+      assert.deepEqual(roundedValueOf('https://pwa.rocks/'), {[groupIdToName.parseHTML]: 14.2, [groupIdToName.scripting]: 6.1, [groupIdToName.scriptParseCompile]: 1.2});
+      assert.deepEqual(roundedValueOf('https://pwa.rocks/0ff789bf.js'), {[groupIdToName.parseHTML]: 0});
     });
   });
 
   it('should get no data when no events are present', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
+    const artifacts = Object.assign({
       traces: {
         [BootupTime.DEFAULT_PASS]: errorTrace,
       },
-    };
+    }, Runner.instantiateComputedArtifacts());
 
     return BootupTime.audit(artifacts)
       .then(output => {

@@ -14,34 +14,11 @@ class DevtoolsTimelineModel extends ComputedArtifact {
   }
 
   /**
-   *
-   * @param {Object} obj
-   * @see https://developer.mozilla.org/nl/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze
-   */
-  deepFreeze(obj) {
-    // Retrieve the property names defined on obj
-    Object.getOwnPropertyNames(obj)
-      .forEach(name => {
-        const prop = obj[name];
-
-        // Freeze prop if it is an object
-        if (typeof prop === 'object' && prop !== null) {
-          this.deepFreeze(prop);
-        }
-      });
-
-    // Freeze self (no-op if already frozen)
-    return Object.freeze(obj);
-  }
-
-  /**
    * @param {Object} trace
    * @return {Object}
    */
   compute_(trace) {
-    const frozenTrace = this.deepFreeze(trace);
-
-    return Promise.resolve(new DTM(frozenTrace));
+    return Promise.resolve(new DTM(trace));
   }
 }
 

@@ -7,20 +7,21 @@
 
 /* eslint-env mocha */
 const ScreenshotsGather = require('../../../gather/computed/screenshots');
-const DevtoolsTimelineGather = require('../../../gather/computed/devtools-timeline-model');
+const Runner = require('../../../runner.js');
 const assert = require('assert');
 const pwaTrace = require('../../fixtures/traces/progressive-app.json');
 
 const screenshotsGather = new ScreenshotsGather({});
-const devtoolsTimelineGather = new DevtoolsTimelineGather({});
 
 describe('Screenshot gatherer', () => {
   it('returns an artifact for a real trace', () => {
-    const artifacts = {
-      requestDevtoolsTimelineModel: trace => devtoolsTimelineGather.compute_(trace),
-    };
+    const artifacts = Object.assign({
+      traces: {
+        [screenshotsGather.DEFAULT_PASS]: pwaTrace,
+      },
+    }, Runner.instantiateComputedArtifacts());
 
-    return screenshotsGather.compute_({traceEvents: pwaTrace}, artifacts).then(screenshots => {
+    return artifacts.requestScreenshots({traceEvents: pwaTrace}).then(screenshots => {
       assert.ok(Array.isArray(screenshots));
       assert.equal(screenshots.length, 7);
 

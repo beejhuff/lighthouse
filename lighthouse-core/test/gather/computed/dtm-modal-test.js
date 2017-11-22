@@ -41,6 +41,7 @@ describe('Speedline gatherer', () => {
           try {
             assert.deepStrictEqual(pwaTrace[i], freshTrace[i]);
           } catch (e) {
+            console.log(pwaTrace[i]);
             // hack so we can see all diff output not fail on the first one.
             mochaReporter.list([{err: e, fullTitle: _ => ''}]);
           }

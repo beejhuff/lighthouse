@@ -12,9 +12,44 @@ const fs = require('fs');
 const pwaTrace = require('../../fixtures/traces/progressive-app.json');
 const Runner = require('../../../runner.js');
 
-const mochaReporter = require('mocha/lib/reporters/base');
+/**
+ * Remove all objects that DTM mutates so we can use deepStrictEqual
+ *
+ * @param {*} trace
+ */
+function removeMutatedDataFromDevtools(trace) {
+  return trace.map(traceEvent => {
+    // deepclone
+    const newTraceEvent = JSON.parse(JSON.stringify(traceEvent));
 
-describe('Speedline gatherer', () => {
+    if (newTraceEvent.args) {
+      if (newTraceEvent.args.data) {
+        const data = newTraceEvent.args.data;
+        delete data.columnNumber;
+        delete data.lineNumber;
+        delete data.url;
+
+        if (data.stackTrace) {
+          data.stackTrace.forEach(stack => {
+            delete stack.columnNumber;
+            delete stack.lineNumber;
+          });
+        }
+      }
+
+      if (newTraceEvent.args.beginData && newTraceEvent.args.beginData.stackTrace) {
+        newTraceEvent.args.beginData.stackTrace.forEach(stack => {
+          delete stack.columnNumber;
+          delete stack.lineNumber;
+        });
+      }
+    }
+
+    return newTraceEvent;
+  });
+}
+
+describe('DTM Model gatherer', () => {
   let computedArtifacts;
 
   beforeEach(() => {
@@ -31,20 +66,18 @@ describe('Speedline gatherer', () => {
     // Use fresh trace in case it has been altered by other require()s.
     const pwaJson = fs.readFileSync(__dirname +
         '/../../fixtures/traces/progressive-app.json', 'utf8');
-    const pwaTrace = JSON.parse(pwaJson);
+    let pwaTrace = JSON.parse(pwaJson);
     return computedArtifacts.requestDevtoolsTimelineModel({traceEvents: pwaTrace})
       .then(_ => {
         // assert.deepEqual has issue with diffing large array, so manually loop.
-        const freshTrace = JSON.parse(pwaJson);
+        const freshTrace = removeMutatedDataFromDevtools(JSON.parse(pwaJson));
         assert.strictEqual(pwaTrace.length, freshTrace.length);
+
+        pwaTrace = removeMutatedDataFromDevtools(pwaTrace);
+        // for loop is faster than doing a deepStrictEqual on the whole trace
+        // Mocha fails as it has a timeout of 2 seconds
         for (let i = 0; i < pwaTrace.length; i++) {
-          try {
-            assert.deepStrictEqual(pwaTrace[i], freshTrace[i]);
-          } catch (e) {
-            console.log(pwaTrace[i]);
-            // hack so we can see all diff output not fail on the first one.
-            mochaReporter.list([{err: e, fullTitle: _ => ''}]);
-          }
+          assert.deepStrictEqual(pwaTrace[i], freshTrace[i]);
         }
       });
   });
